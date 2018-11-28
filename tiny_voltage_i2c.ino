@@ -13,7 +13,7 @@
 #define I2C_SLAVE_ADDR  0x26
 #define VOLTAGE_PIN A2
 
-int voltage_adc;
+uint8_t voltage_adc;
 uint8_t received = 0;
 
 void setup() {
@@ -23,7 +23,7 @@ void setup() {
 }
 
 void loop() {
-  voltage_adc = analogRead(VOLTAGE_PIN); 
+  voltage_adc = analogRead(VOLTAGE_PIN)/4; 
 }
 
 void send_data() {
