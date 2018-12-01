@@ -18,11 +18,83 @@ union Uint16AsBytes {
   uint8_t bval[2];
 };
 
+class DataPacket {
+public:
+  bool sending = false;
+  void set_data(uint16_t data_u) {
+    num_bits = sizeof(data_u);
+    Uint16AsBytes datau;
+    datau.ival = data_u;
+
+    for (uint8_t i = 0; i<num_bits; i++) {
+      data[i] = datau.bval[i];
+    }
+
+    calculate_checksum();
+  }
+
+  void set_data() {
+    num_bits = 3;
+    data[0] = 'H';
+    data[1] = 'e';
+    data[2] = 'j';
+
+    calculate_checksum();
+  }
+
+
+  void send_byte() {
+    uint8_t out_byte = 0x00;
+    if (pointer < 3) {
+      out_byte = preamble[pointer];
+    } else if (pointer == 3) {
+      out_byte = num_bits;
+    } else if (pointer > 3 && pointer <= 3+num_bits) {
+      out_byte = data[pointer-4];
+    } else if (pointer == 4+num_bits) {
+      out_byte = checksum;
+    }
+
+    TinyWire.send(out_byte);
+    pointer++;
+
+    if (pointer > num_bits + 4) {
+      pointer = 0;
+      sending = false;
+    } else {
+      sending = true;
+    }
+  };
+private:
+
+  void calculate_checksum() {
+
+    uint16_t checksum_l = 0;
+
+    for (uint8_t i = 0; i< num_bits; i++) {
+      checksum_l += data[i];
+    }
+
+    checksum = checksum_l % 0xfd;
+  }
+
+  uint8_t num_bits { 0x00 };
+  uint8_t checksum { 0x00 };
+  uint8_t pointer { 0x00 };
+  uint8_t preamble[3] {
+    0xfd,
+    0xfc,
+    0xfd
+  };
+  uint8_t data[128];
+
+};
+
 uint16_t voltage_adc;
 bool sending = false;
 uint8_t byte_counter = 0;
 
-Uint16AsBytes voltage_un;
+DataPacket packet;
 
 void setup() {
   pinMode(VOLTAGE_PIN, INPUT);
@@ -33,19 +105,13 @@ void setup() {
 }
 
 void loop() {
-  if (!sending) {
+  if (!packet.sending) {
     voltage_adc = analogRead(VOLTAGE_PIN);
-    voltage_un.ival = voltage_adc;
+    packet.set_data();
   }
 }
 
 void send_data() {
-    bool sending = true;
-    TinyWire.send(voltage_un.bval[byte_counter]);
-    byte_counter++;
 
-    if (byte_counter >= 2) {
-      byte_counter = 0;
-      sending = false;
-    }
+    packet.send_byte();
 }
