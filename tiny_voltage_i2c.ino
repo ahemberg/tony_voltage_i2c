@@ -33,16 +33,6 @@ public:
     calculate_checksum();
   }
 
-  void set_data() {
-    num_bits = 3;
-    data[0] = 'H';
-    data[1] = 'e';
-    data[2] = 'j';
-
-    calculate_checksum();
-  }
-
-
   void send_byte() {
     uint8_t out_byte = 0x00;
     if (pointer < 3) {
@@ -107,11 +97,10 @@ void setup() {
 void loop() {
   if (!packet.sending) {
     voltage_adc = analogRead(VOLTAGE_PIN);
-    packet.set_data();
+    packet.set_data(voltage_adc);
   }
 }
 
 void send_data() {
-
     packet.send_byte();
 }
